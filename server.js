@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
+
+puppeteer.use(StealthPlugin());
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,19 +77,12 @@ app.post('/api/refresh', async (req, res) => {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-blink-features=AutomationControlled'
+        '--window-size=1280,800'
       ]
     });
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    });
-
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    );
 
     // Navigate to refreshsims.net
     await page.goto('https://www.refreshsims.net/', {
@@ -100,14 +96,14 @@ app.post('/api/refresh', async (req, res) => {
         () => typeof window.grecaptcha !== 'undefined' && typeof window.grecaptcha.execute === 'function',
         { timeout: 15000 }
       );
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 1200));
     } catch (e) {
       console.warn('reCAPTCHA wait warning:', e.message);
     }
 
     // Enter phone with natural delay
     await page.waitForSelector('#ph', { timeout: 10000 });
-    await page.type('#ph', phone, { delay: 70 });
+    await page.type('#ph', phone, { delay: 80 });
     await new Promise(r => setTimeout(r, 500));
 
     // Submit form
