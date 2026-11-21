@@ -14,7 +14,6 @@ function getExecutablePath() {
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
-  // Common paths on Linux / Render / Docker
   const linuxPaths = [
     '/usr/bin/google-chrome-stable',
     '/usr/bin/google-chrome',
@@ -24,7 +23,6 @@ function getExecutablePath() {
   for (const p of linuxPaths) {
     if (fs.existsSync(p)) return p;
   }
-  // Windows paths for local testing
   const winPaths = [
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
@@ -81,8 +79,13 @@ app.post('/api/refresh', async (req, res) => {
     });
 
     const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     );
 
     // Navigate to refreshsims.net
@@ -91,11 +94,23 @@ app.post('/api/refresh', async (req, res) => {
       timeout: 30000
     });
 
-    // Enter phone
-    await page.waitForSelector('#ph', { timeout: 10000 });
-    await page.type('#ph', phone);
+    // Wait for Google reCAPTCHA to be initialized
+    try {
+      await page.waitForFunction(
+        () => typeof window.grecaptcha !== 'undefined' && typeof window.grecaptcha.execute === 'function',
+        { timeout: 15000 }
+      );
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {
+      console.warn('reCAPTCHA wait warning:', e.message);
+    }
 
-    // Submit
+    // Enter phone with natural delay
+    await page.waitForSelector('#ph', { timeout: 10000 });
+    await page.type('#ph', phone, { delay: 70 });
+    await new Promise(r => setTimeout(r, 500));
+
+    // Submit form
     await page.click('#b');
 
     // Wait for final response: #r with class .s (success) or .e (error)
