@@ -1,8 +1,8 @@
 FROM node:20-slim
 
-# Install latest chrome dev package and fonts to support major charsets (including Arabic)
+# Install latest chrome, xvfb, and fonts
 RUN apt-get update \
-    && apt-get install -y wget gnupg \
+    && apt-get install -y wget gnupg xvfb \
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
     && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
     && apt-get update \
@@ -11,6 +11,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+ENV DISPLAY=:99
 
 WORKDIR /usr/src/app
 
@@ -21,4 +22,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["xvfb-run", "--server-args=-screen 0 1280x800x24 -ac", "node", "server.js"]

@@ -69,9 +69,10 @@ app.post('/api/refresh', async (req, res) => {
 
   let browser = null;
   try {
+    // Run real GUI Chrome (headless: false) on virtual Xvfb screen
     browser = await puppeteer.launch({
       executablePath: execPath,
-      headless: true,
+      headless: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -87,24 +88,18 @@ app.post('/api/refresh', async (req, res) => {
     // Navigate to refreshsims.net
     await page.goto('https://www.refreshsims.net/', {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 35000
     });
 
-    // Wait for Google reCAPTCHA to be initialized
-    try {
-      await page.waitForFunction(
-        () => typeof window.grecaptcha !== 'undefined' && typeof window.grecaptcha.execute === 'function',
-        { timeout: 15000 }
-      );
-      await new Promise(r => setTimeout(r, 1200));
-    } catch (e) {
-      console.warn('reCAPTCHA wait warning:', e.message);
-    }
+    // Human mouse moves to gain high reCAPTCHA v3 score
+    await page.mouse.move(100, 150);
+    await page.mouse.move(250, 320);
 
-    // Enter phone with natural delay
-    await page.waitForSelector('#ph', { timeout: 10000 });
-    await page.type('#ph', phone, { delay: 80 });
-    await new Promise(r => setTimeout(r, 500));
+    // Enter phone with natural click and typing delay
+    await page.waitForSelector('#ph', { timeout: 15000 });
+    await page.click('#ph');
+    await page.type('#ph', phone, { delay: 90 });
+    await new Promise(r => setTimeout(r, 1000));
 
     // Submit form
     await page.click('#b');
